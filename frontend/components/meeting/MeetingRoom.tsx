@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Info, Shield } from "lucide-react";
+import { Copy, LayoutGrid, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   api,
@@ -53,6 +53,7 @@ export default function MeetingRoom({
 
   const [panel, setPanel] = useState<"none" | "participants" | "chat">("none");
   const [showInfo, setShowInfo] = useState(false);
+  const [showReactions, setShowReactions] = useState(false);
   const [copied, setCopied] = useState(false);
   const [readChat, setReadChat] = useState(0);
   const [elapsed, setElapsed] = useState("00:00");
@@ -112,29 +113,43 @@ export default function MeetingRoom({
   const localTileStream = room.screenStream ?? room.localStream;
 
   return (
-    <div className="flex h-screen flex-col bg-zoom-dark text-white">
-      {/* top bar */}
-      <div className="flex items-center justify-between border-b border-zoom-border bg-zoom-panel px-4 py-2">
-        <div className="flex items-center gap-2">
-          <Shield size={16} className="text-green-500" />
+    <div className="relative flex h-screen flex-col bg-zoom-dark text-white">
+      {/* top bar — Zoom Workplace web client style */}
+      <div className="flex items-center justify-between bg-black px-4 py-2">
+        <div className="flex flex-col leading-tight">
+          <span className="text-[11px] font-bold lowercase text-white">
+            zoom
+          </span>
+          <span className="text-[15px] font-semibold text-white">
+            Workplace
+          </span>
+        </div>
+        <div className="flex items-center gap-3 text-xs text-gray-300">
           <button
             onClick={() => setShowInfo((v) => !v)}
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-100 hover:text-white"
+            aria-label="Meeting information"
+            title={
+              room.connected
+                ? "Meeting information"
+                : "Connecting to the meeting…"
+            }
+            className="rounded p-1 hover:bg-white/10"
           >
-            {meeting.title}
-            <Info size={13} className="text-gray-400" />
+            <ShieldCheck
+              size={18}
+              className={room.connected ? "text-green-500" : "text-amber-400"}
+            />
           </button>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-gray-400">
-          <span className={room.connected ? "text-green-400" : "text-amber-400"}>
-            {room.connected ? "● Connected" : "○ Connecting…"}
-          </span>
           <span>{elapsed}</span>
+          <span className="h-4 w-px bg-white/20" aria-hidden />
+          <button className="flex items-center gap-1.5 rounded px-1.5 py-1 text-[13px] text-white hover:bg-white/10">
+            <LayoutGrid size={15} /> View
+          </button>
         </div>
       </div>
 
       {showInfo && (
-        <div className="absolute left-4 top-12 z-30 w-80 rounded-xl border border-zoom-border bg-zoom-panel p-4 text-sm shadow-2xl">
+        <div className="absolute right-4 top-12 z-30 w-80 rounded-xl border border-zoom-border bg-zoom-panel p-4 text-sm shadow-2xl">
           <p className="font-semibold">{meeting.title}</p>
           <p className="mt-2 text-gray-300">
             Meeting ID:{" "}
@@ -205,12 +220,31 @@ export default function MeetingRoom({
         )}
       </div>
 
+      {/* reactions popover */}
+      {showReactions && (
+        <div className="absolute bottom-16 left-1/2 z-30 flex -translate-x-1/2 gap-1 rounded-full border border-zoom-border bg-zoom-panel px-3 py-2 shadow-2xl">
+          {["👍", "❤️", "😂", "👏", "🎉", "😮"].map((emoji) => (
+            <button
+              key={emoji}
+              onClick={() => {
+                room.sendChat(emoji);
+                setShowReactions(false);
+              }}
+              className="rounded-full p-1.5 text-xl transition-transform hover:scale-125"
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
+
       <ControlBar
         micOn={room.micOn}
         camOn={room.camOn}
         sharing={sharing}
         participantCount={peerList.length + 1}
         unreadChat={Math.max(0, unreadChat)}
+        isHost={isHost}
         onToggleMic={room.toggleMic}
         onToggleCam={room.toggleCam}
         onToggleShare={sharing ? room.stopScreenShare : room.startScreenShare}
@@ -218,8 +252,12 @@ export default function MeetingRoom({
           setPanel((p) => (p === "participants" ? "none" : "participants"))
         }
         onToggleChat={() => setPanel((p) => (p === "chat" ? "none" : "chat"))}
+        onReact={() => setShowReactions((v) => !v)}
+        onHostTools={() =>
+          setPanel((p) => (p === "participants" ? "none" : "participants"))
+        }
+        onMore={() => setShowInfo((v) => !v)}
         onLeave={leave}
-        isHost={isHost}
       />
     </div>
   );

@@ -3,11 +3,9 @@
 import { CalendarPlus, Check, Copy, Plus, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import JoinModal from "@/components/JoinModal";
 import MeetingListItem from "@/components/MeetingListItem";
 import Navbar from "@/components/Navbar";
 import NewMeetingModal from "@/components/NewMeetingModal";
-import ScheduleModal from "@/components/ScheduleModal";
 import Sidebar from "@/components/Sidebar";
 import { api, saveHostKey, type Meeting, type User } from "@/lib/api";
 
@@ -103,8 +101,6 @@ export default function Dashboard() {
   const [recent, setRecent] = useState<Meeting[]>([]);
   const [creating, setCreating] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showSchedule, setShowSchedule] = useState(false);
-  const [showJoin, setShowJoin] = useState(false);
   const [newMeetingInfo, setNewMeetingInfo] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
   const [slowHint, setSlowHint] = useState(false);
@@ -179,8 +175,6 @@ export default function Dashboard() {
       <Navbar
         user={user}
         onMenuClick={() => setSidebarOpen(true)}
-        onSchedule={() => setShowSchedule(true)}
-        onJoin={() => setShowJoin(true)}
         onHost={newMeeting}
       />
 
@@ -287,13 +281,13 @@ export default function Dashboard() {
                     icon={<CalendarPlus size={24} />}
                     label="Schedule"
                     color="blue"
-                    onClick={() => setShowSchedule(true)}
+                    onClick={() => router.push("/schedule")}
                   />
                   <QuickAction
                     icon={<Plus size={26} />}
                     label="Join"
                     color="blue"
-                    onClick={() => setShowJoin(true)}
+                    onClick={() => router.push("/join")}
                   />
                   <QuickAction
                     icon={<Video size={24} />}
@@ -328,7 +322,7 @@ export default function Dashboard() {
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-bold text-gray-900">Meetings</h2>
                   <button
-                    onClick={() => setShowSchedule(true)}
+                    onClick={() => router.push("/schedule")}
                     className="text-sm font-medium text-zoom-blue hover:underline"
                   >
                     Schedule a Meeting
@@ -360,7 +354,7 @@ export default function Dashboard() {
                 )}
 
                 <button
-                  onClick={() => setShowJoin(true)}
+                  onClick={() => router.push("/join")}
                   className="mt-4 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
                 >
                   Test Audio and Video
@@ -371,13 +365,6 @@ export default function Dashboard() {
         </main>
       </div>
 
-      {showSchedule && (
-        <ScheduleModal
-          onClose={() => setShowSchedule(false)}
-          onScheduled={refresh}
-        />
-      )}
-      {showJoin && <JoinModal onClose={() => setShowJoin(false)} />}
       {newMeetingInfo && (
         <NewMeetingModal
           meeting={newMeetingInfo}

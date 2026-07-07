@@ -1,6 +1,7 @@
 "use client";
 
 import { ExternalLink, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Item {
   label: string;
@@ -23,10 +24,18 @@ const MY_PRODUCTS: Item[] = [
   { label: "Slides", external: true },
 ];
 
-function NavList() {
+function NavList({ active }: { active: string }) {
+  const router = useRouter();
   return (
     <nav className="thin-scroll h-full overflow-y-auto py-3">
-      <button className="mb-3 flex w-full items-center border-l-2 border-zoom-blue bg-zoom-blue-light px-5 py-2.5 text-[15px] font-medium text-zoom-blue">
+      <button
+        onClick={() => router.push("/")}
+        className={`mb-3 flex w-full items-center px-5 py-2.5 text-[15px] ${
+          active === "Home"
+            ? "border-l-2 border-zoom-blue bg-zoom-blue-light font-medium text-zoom-blue"
+            : "text-gray-800 hover:bg-gray-50"
+        }`}
+      >
         Home
       </button>
 
@@ -36,7 +45,12 @@ function NavList() {
       {MY_PRODUCTS.map((item) => (
         <button
           key={item.label}
-          className="flex w-full items-center gap-2 px-5 py-2 text-[15px] text-gray-800 hover:bg-gray-50"
+          onClick={item.label === "Meetings" ? () => router.push("/") : undefined}
+          className={`flex w-full items-center gap-2 px-5 py-2 text-[15px] ${
+            active === item.label
+              ? "border-l-2 border-zoom-blue bg-zoom-blue-light font-medium text-zoom-blue"
+              : "text-gray-800 hover:bg-gray-50"
+          }`}
         >
           {item.label}
           {item.isNew && (
@@ -56,14 +70,15 @@ function NavList() {
 interface Props {
   mobileOpen: boolean;
   onClose: () => void;
+  active?: string;
 }
 
-export default function Sidebar({ mobileOpen, onClose }: Props) {
+export default function Sidebar({ mobileOpen, onClose, active = "Home" }: Props) {
   return (
     <>
       {/* desktop rail */}
       <aside className="hidden w-60 shrink-0 border-r border-gray-100 bg-white lg:block">
-        <NavList />
+        <NavList active={active} />
       </aside>
 
       {/* mobile drawer */}
@@ -84,7 +99,7 @@ export default function Sidebar({ mobileOpen, onClose }: Props) {
                 <X size={18} />
               </button>
             </div>
-            <NavList />
+            <NavList active={active} />
           </aside>
         </div>
       )}
