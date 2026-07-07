@@ -1,5 +1,6 @@
 """REST endpoints for meetings: create, schedule, join, list, end."""
 import random
+import secrets
 import string
 from datetime import datetime, timedelta, timezone
 
@@ -47,7 +48,12 @@ def _get_meeting_or_404(db: Session, meeting_code: str) -> models.Meeting:
     return meeting
 
 
-@router.post("/instant", response_model=schemas.MeetingOut)
+def _verify_host_key(meeting: models.Meeting, host_key: str) -> None:
+    if not host_key or not secrets.compare_digest(meeting.host_key, host_key):
+        raise HTTPException(status_code=403, detail="Only the meeting host can do this.")
+
+
+@router.post("/instant", response_model=schemas.MeetingHostOut)
 def create_instant_meeting(
     payload: schemas.InstantMeetingIn,
     db: Session = Depends(get_db),
@@ -58,6 +64,7 @@ def create_instant_meeting(
         meeting_code=_generate_meeting_code(db),
         title=payload.title or f"{host.name}'s Zoom Meeting",
         passcode=_generate_passcode(),
+        host_key=secrets.token_hex(16),
         host_id=host.id,
         meeting_type="instant",
         status="active",
@@ -69,7 +76,7 @@ def create_instant_meeting(
     return meeting
 
 
-@router.post("/schedule", response_model=schemas.MeetingOut)
+@router.post("/schedule", response_model=schemas.MeetingHostOut)
 def schedule_meeting(payload: schemas.ScheduleMeetingIn, db: Session = Depends(get_db)):
     """Create a scheduled meeting for a future date/time."""
     host = get_default_user(db)
@@ -81,6 +88,7 @@ def schedule_meeting(payload: schemas.ScheduleMeetingIn, db: Session = Depends(g
         title=payload.title,
         description=payload.description,
         passcode=_generate_passcode(),
+        host_key=secrets.token_hex(16),
         host_id=host.id,
         meeting_type="scheduled",
         status="waiting",
@@ -93,7 +101,7 @@ def schedule_meeting(payload: schemas.ScheduleMeetingIn, db: Session = Depends(g
     return meeting
 
 
-@router.get("/upcoming", response_model=list[schemas.MeetingOut])
+@router.get("/upcoming", response_model=list[schemas.MeetingHostOut])
 def list_upcoming(db: Session = Depends(get_db)):
     """Scheduled meetings that haven't ended yet, soonest first."""
     cutoff = _utcnow() - timedelta(hours=1)
@@ -112,7 +120,7 @@ def list_upcoming(db: Session = Depends(get_db)):
     )
 
 
-@router.get("/recent", response_model=list[schemas.MeetingOut])
+@router.get("/recent", response_model=list[schemas.MeetingHostOut])
 def list_recent(db: Session = Depends(get_db)):
     """Meetings that already happened (ended, or active instant ones), newest first."""
     return (
@@ -177,9 +185,12 @@ def leave_meeting(meeting_code: str, participant_id: int, db: Session = Depends(
 
 
 @router.post("/{meeting_code}/end", response_model=schemas.MeetingOut)
-def end_meeting(meeting_code: str, db: Session = Depends(get_db)):
-    """End the meeting for everyone (host control)."""
+def end_meeting(
+    meeting_code: str, payload: schemas.HostKeyIn, db: Session = Depends(get_db)
+):
+    """End the meeting for everyone (host only)."""
     meeting = _get_meeting_or_404(db, meeting_code)
+    _verify_host_key(meeting, payload.host_key)
     meeting.status = "ended"
     meeting.ended_at = _utcnow()
     now = _utcnow()
@@ -192,9 +203,12 @@ def end_meeting(meeting_code: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/{meeting_code}", response_model=schemas.MeetingOut)
-def delete_scheduled_meeting(meeting_code: str, db: Session = Depends(get_db)):
-    """Cancel a scheduled meeting from the dashboard."""
+def delete_scheduled_meeting(
+    meeting_code: str, host_key: str = "", db: Session = Depends(get_db)
+):
+    """Cancel a scheduled meeting from the dashboard (host only)."""
     meeting = _get_meeting_or_404(db, meeting_code)
+    _verify_host_key(meeting, host_key)
     if meeting.meeting_type != "scheduled" or meeting.status == "ended":
         raise HTTPException(status_code=400, detail="Only upcoming scheduled meetings can be cancelled.")
     meeting.status = "ended"

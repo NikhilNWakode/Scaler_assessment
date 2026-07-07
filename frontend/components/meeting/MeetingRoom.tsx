@@ -19,7 +19,7 @@ interface Props {
   meeting: Meeting;
   participant: Participant;
   displayName: string;
-  isHost: boolean;
+  hostKey: string | null;
   initialMicOn: boolean;
   initialCamOn: boolean;
   onLeave: (reason: "left" | "removed" | "ended") => void;
@@ -36,15 +36,16 @@ export default function MeetingRoom({
   meeting,
   participant,
   displayName,
-  isHost,
+  hostKey,
   initialMicOn,
   initialCamOn,
   onLeave,
 }: Props) {
+  const isHost = !!hostKey;
   const room = useMeetingRoom({
     meetingCode: meeting.meeting_code,
     displayName,
-    isHost,
+    hostKey,
     initialMicOn,
     initialCamOn,
     onKicked: (reason) => onLeave(reason),
@@ -86,14 +87,14 @@ export default function MeetingRoom({
   };
 
   const leave = async () => {
-    if (isHost) {
+    if (isHost && hostKey) {
       const endForEveryone = confirm(
         "End the meeting for everyone? (Cancel = just leave)"
       );
       if (endForEveryone) {
         room.endForAll();
         try {
-          await api.endMeeting(meeting.meeting_code);
+          await api.endMeeting(meeting.meeting_code, hostKey);
         } catch {
           /* meeting may already be ended */
         }
@@ -156,8 +157,8 @@ export default function MeetingRoom({
         </div>
       )}
 
-      {/* main area */}
-      <div className="flex min-h-0 flex-1">
+      {/* main area — side panels overlay the video on small screens */}
+      <div className="relative flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 items-center justify-center overflow-y-auto p-3 sm:p-5">
           <div
             className={`grid w-full gap-3 ${gridClass(peerList.length + 1)}`}

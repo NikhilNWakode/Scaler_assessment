@@ -57,8 +57,18 @@ class MeetingOut(BaseModel):
     host: UserOut
 
 
+class MeetingHostOut(MeetingOut):
+    """Meeting as seen by its host — includes the secret host key."""
+
+    host_key: str
+
+
 class MeetingWithParticipants(MeetingOut):
     participants: list[ParticipantOut]
+
+
+class HostKeyIn(BaseModel):
+    host_key: str
 
 
 class JoinMeetingOut(BaseModel):

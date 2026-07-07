@@ -39,6 +39,9 @@ class Meeting(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     passcode: Mapped[str] = mapped_column(String(10), nullable=False)
+    # Secret token returned only to the meeting creator; required for
+    # host actions (end meeting, cancel, mute/remove participants).
+    host_key: Mapped[str] = mapped_column(String(64), nullable=False)
 
     host_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     host: Mapped[User] = relationship(back_populates="hosted_meetings")

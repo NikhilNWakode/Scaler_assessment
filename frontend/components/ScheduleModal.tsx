@@ -2,7 +2,13 @@
 
 import { X } from "lucide-react";
 import { useState } from "react";
-import { api, formatMeetingCode, inviteLink, type Meeting } from "@/lib/api";
+import {
+  api,
+  formatMeetingCode,
+  inviteLink,
+  saveHostKey,
+  type Meeting,
+} from "@/lib/api";
 
 const DURATIONS = [15, 30, 40, 45, 60, 90, 120];
 
@@ -45,6 +51,7 @@ export default function ScheduleModal({ onClose, onScheduled }: Props) {
         scheduled_at: when.toISOString(),
         duration_minutes: duration,
       });
+      saveHostKey(meeting.meeting_code, meeting.host_key);
       setCreated(meeting);
       onScheduled();
     } catch (err) {

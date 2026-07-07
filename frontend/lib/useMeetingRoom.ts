@@ -40,7 +40,8 @@ interface PeerState {
 interface Options {
   meetingCode: string;
   displayName: string;
-  isHost: boolean;
+  /** Secret host key — the backend verifies it; without it host controls are ignored. */
+  hostKey: string | null;
   initialMicOn: boolean;
   initialCamOn: boolean;
   /** Called when the host removes you or ends the meeting for everyone. */
@@ -230,7 +231,7 @@ export function useMeetingRoom(opts: Options) {
           JSON.stringify({
             type: "hello",
             name: optsRef.current.displayName,
-            is_host: optsRef.current.isHost,
+            host_key: optsRef.current.hostKey ?? "",
             muted: !localStreamRef.current?.getAudioTracks()[0]?.enabled,
             camera_on: !!localStreamRef.current?.getVideoTracks()[0]?.enabled,
           })

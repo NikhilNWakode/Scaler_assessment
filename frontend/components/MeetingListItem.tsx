@@ -66,7 +66,7 @@ export default function MeetingListItem({
         <button
           onClick={copyInvite}
           title="Copy invitation"
-          className="rounded-md p-2 text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100"
+          className="rounded-md p-2 text-gray-400 transition-opacity hover:bg-gray-100 hover:text-gray-700 sm:opacity-0 sm:group-hover:opacity-100"
         >
           {copied ? (
             <span className="text-xs font-medium text-green-600">Copied</span>
@@ -78,14 +78,14 @@ export default function MeetingListItem({
           <button
             onClick={() => onCancel(meeting)}
             title="Delete meeting"
-            className="rounded-md p-2 text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
+            className="rounded-md p-2 text-gray-400 transition-opacity hover:bg-red-50 hover:text-red-600 sm:opacity-0 sm:group-hover:opacity-100"
           >
             <Trash2 size={16} />
           </button>
         )}
         <button
           onClick={() => onStart(meeting)}
-          className="rounded-lg bg-zoom-blue px-4 py-1.5 text-sm font-medium text-white hover:bg-zoom-blue-dark"
+          className="rounded-lg bg-zoom-blue px-3 py-1.5 text-sm font-medium text-white hover:bg-zoom-blue-dark sm:px-4"
         >
           {variant === "upcoming" ? "Start" : "Rejoin"}
         </button>

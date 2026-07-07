@@ -8,10 +8,29 @@ Each meeting room keeps a set of live connections. The socket carries:
 - in-meeting chat
 """
 import json
+import secrets
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from sqlalchemy import select
+
+from . import models
+from .database import SessionLocal
 
 router = APIRouter(tags=["websocket"])
+
+
+def _verify_host(meeting_code: str, host_key: str) -> bool:
+    """Host status is proven by the secret host key, never trusted from the client."""
+    if not host_key:
+        return False
+    db = SessionLocal()
+    try:
+        meeting = db.scalar(
+            select(models.Meeting).where(models.Meeting.meeting_code == meeting_code)
+        )
+        return bool(meeting) and secrets.compare_digest(meeting.host_key, host_key)
+    finally:
+        db.close()
 
 
 class Room:
@@ -60,7 +79,7 @@ async def meeting_socket(ws: WebSocket, meeting_code: str, peer_id: str):
         room.peers[peer_id] = {
             "ws": ws,
             "name": hello.get("name", "Guest"),
-            "is_host": bool(hello.get("is_host")),
+            "is_host": _verify_host(meeting_code, hello.get("host_key", "")),
             "muted": bool(hello.get("muted")),
             "camera_on": bool(hello.get("camera_on", True)),
         }

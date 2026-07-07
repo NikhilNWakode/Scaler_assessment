@@ -68,7 +68,7 @@ export default function ParticipantsPanel({
   onRemovePeer,
 }: Props) {
   return (
-    <aside className="flex w-full flex-col border-l border-zoom-border bg-zoom-panel sm:w-80">
+    <aside className="absolute inset-y-0 right-0 z-20 flex w-full flex-col border-l border-zoom-border bg-zoom-panel sm:static sm:w-80">
       <div className="flex items-center justify-between border-b border-zoom-border px-4 py-3">
         <h3 className="text-sm font-semibold text-gray-100">
           Participants ({peers.length + 1})
@@ -92,7 +92,7 @@ export default function ParticipantsPanel({
             isHost={p.isHost}
             actions={
               isHost ? (
-                <div className="hidden items-center gap-1 group-hover:flex">
+                <div className="flex items-center gap-1 sm:hidden sm:group-hover:flex">
                   {!p.muted && (
                     <button
                       onClick={() => onMutePeer(p.peerId)}

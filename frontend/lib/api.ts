@@ -36,6 +36,8 @@ export interface Meeting {
   started_at: string | null;
   ended_at: string | null;
   host: User;
+  /** Secret host token — only present on responses meant for the host. */
+  host_key?: string;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -97,16 +99,45 @@ export const api = {
       { method: "POST" }
     ),
 
-  endMeeting: (code: string) =>
+  endMeeting: (code: string, hostKey: string) =>
     request<Meeting>(`/api/meetings/${encodeURIComponent(code)}/end`, {
       method: "POST",
+      body: JSON.stringify({ host_key: hostKey }),
     }),
 
-  cancelMeeting: (code: string) =>
-    request<Meeting>(`/api/meetings/${encodeURIComponent(code)}`, {
-      method: "DELETE",
-    }),
+  cancelMeeting: (code: string, hostKey: string) =>
+    request<Meeting>(
+      `/api/meetings/${encodeURIComponent(code)}?host_key=${encodeURIComponent(hostKey)}`,
+      { method: "DELETE" }
+    ),
 };
+
+/**
+ * Host keys live in localStorage on the device that created the meeting —
+ * they prove host identity to the backend without a login system.
+ */
+const HOST_KEYS_STORAGE = "zoom_clone_host_keys";
+
+export function saveHostKey(code: string, key: string | undefined) {
+  if (!key || typeof window === "undefined") return;
+  try {
+    const keys = JSON.parse(localStorage.getItem(HOST_KEYS_STORAGE) ?? "{}");
+    keys[code] = key;
+    localStorage.setItem(HOST_KEYS_STORAGE, JSON.stringify(keys));
+  } catch {
+    /* storage unavailable (private mode) — host features degrade gracefully */
+  }
+}
+
+export function getHostKey(code: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const keys = JSON.parse(localStorage.getItem(HOST_KEYS_STORAGE) ?? "{}");
+    return keys[code] ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /** "83412907561" -> "834 1290 7561" (how Zoom displays meeting IDs) */
 export function formatMeetingCode(code: string): string {

@@ -12,8 +12,9 @@ import ActionTile from "@/components/ActionTile";
 import JoinModal from "@/components/JoinModal";
 import MeetingListItem from "@/components/MeetingListItem";
 import Navbar from "@/components/Navbar";
+import NewMeetingModal from "@/components/NewMeetingModal";
 import ScheduleModal from "@/components/ScheduleModal";
-import { api, type Meeting, type User } from "@/lib/api";
+import { api, saveHostKey, type Meeting, type User } from "@/lib/api";
 
 function Clock() {
   const [now, setNow] = useState<Date | null>(null);
@@ -51,6 +52,9 @@ export default function Dashboard() {
   const [creating, setCreating] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+  const [newMeetingInfo, setNewMeetingInfo] = useState<Meeting | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [slowHint, setSlowHint] = useState(false);
   const [loadError, setLoadError] = useState("");
 
   const refresh = useCallback(async () => {
@@ -68,28 +72,45 @@ export default function Dashboard() {
       setLoadError(
         "Could not reach the backend. Make sure the API server is running."
       );
+    } finally {
+      setLoading(false);
+      setSlowHint(false);
     }
   }, []);
 
   useEffect(() => {
-    refresh();
+    // Free-tier hosting sleeps when idle; explain slow first loads.
+    const hint = setTimeout(() => setSlowHint(true), 4000);
+    refresh().finally(() => clearTimeout(hint));
+    return () => clearTimeout(hint);
   }, [refresh]);
 
   const newMeeting = async () => {
     setCreating(true);
     try {
       const meeting = await api.createInstantMeeting();
-      router.push(`/meeting/${meeting.meeting_code}?host=1`);
+      saveHostKey(meeting.meeting_code, meeting.host_key);
+      setNewMeetingInfo(meeting); // show share link before entering the room
     } catch {
-      setCreating(false);
       setLoadError("Failed to create meeting. Is the backend running?");
+    } finally {
+      setCreating(false);
     }
+  };
+
+  const startMeeting = (meeting: Meeting) => {
+    saveHostKey(meeting.meeting_code, meeting.host_key);
+    router.push(`/meeting/${meeting.meeting_code}`);
   };
 
   const cancelMeeting = async (meeting: Meeting) => {
     if (!confirm(`Delete "${meeting.title}"?`)) return;
-    await api.cancelMeeting(meeting.meeting_code);
-    refresh();
+    try {
+      await api.cancelMeeting(meeting.meeting_code, meeting.host_key ?? "");
+      refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete meeting.");
+    }
   };
 
   const meetings = tab === "upcoming" ? upcoming : recent;
@@ -163,7 +184,22 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {loadError ? (
+            {loading ? (
+              <div className="flex flex-col gap-2.5 px-1 py-1">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-[68px] animate-pulse rounded-xl bg-gray-100"
+                  />
+                ))}
+                {slowHint && (
+                  <p className="pt-1 text-center text-xs text-gray-400">
+                    Waking up the server (free hosting) — the first load can
+                    take up to a minute…
+                  </p>
+                )}
+              </div>
+            ) : loadError ? (
               <p className="px-2 py-8 text-center text-sm text-red-600">
                 {loadError}
               </p>
@@ -190,9 +226,7 @@ export default function Dashboard() {
                     key={m.id}
                     meeting={m}
                     variant={tab}
-                    onStart={(mt) =>
-                      router.push(`/meeting/${mt.meeting_code}?host=1`)
-                    }
+                    onStart={startMeeting}
                     onCancel={tab === "upcoming" ? cancelMeeting : undefined}
                   />
                 ))}
@@ -209,6 +243,16 @@ export default function Dashboard() {
         />
       )}
       {showJoin && <JoinModal onClose={() => setShowJoin(false)} />}
+      {newMeetingInfo && (
+        <NewMeetingModal
+          meeting={newMeetingInfo}
+          onStart={() => router.push(`/meeting/${newMeetingInfo.meeting_code}`)}
+          onClose={() => {
+            setNewMeetingInfo(null);
+            refresh(); // the created meeting shows up under Recent
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,10 +1,10 @@
 "use client";
 
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import MeetingRoom from "@/components/meeting/MeetingRoom";
 import PreJoin from "@/components/meeting/PreJoin";
-import { api, type Meeting, type Participant } from "@/lib/api";
+import { api, getHostKey, type Meeting, type Participant } from "@/lib/api";
 
 type Stage =
   | { kind: "loading" }
@@ -22,9 +22,10 @@ type Stage =
 
 function MeetingPageInner() {
   const { code } = useParams<{ code: string }>();
-  const search = useSearchParams();
   const router = useRouter();
-  const isHost = search.get("host") === "1";
+  // Host status is proven by the secret key saved when this device
+  // created the meeting — a guest opening the same link never has it.
+  const [hostKey, setHostKey] = useState<string | null>(null);
 
   const [stage, setStage] = useState<Stage>({ kind: "loading" });
   const [defaultName, setDefaultName] = useState("");
@@ -32,6 +33,8 @@ function MeetingPageInner() {
 
   useEffect(() => {
     let cancelled = false;
+    const key = getHostKey(code);
+    setHostKey(key);
     (async () => {
       try {
         const [meeting, me] = await Promise.all([
@@ -39,7 +42,7 @@ function MeetingPageInner() {
           api.me().catch(() => null),
         ]);
         if (cancelled) return;
-        if (isHost && me) setDefaultName(me.name);
+        if (key && me) setDefaultName(me.name);
         setStage({ kind: "prejoin", meeting });
       } catch (err) {
         if (!cancelled) {
@@ -54,7 +57,7 @@ function MeetingPageInner() {
     return () => {
       cancelled = true;
     };
-  }, [code, isHost]);
+  }, [code]);
 
   const join = async (opts: { name: string; micOn: boolean; camOn: boolean }) => {
     if (stage.kind !== "prejoin") return;
@@ -150,7 +153,7 @@ function MeetingPageInner() {
       meeting={stage.meeting}
       participant={stage.participant}
       displayName={stage.name}
-      isHost={isHost}
+      hostKey={hostKey}
       initialMicOn={stage.micOn}
       initialCamOn={stage.camOn}
       onLeave={(reason) => setStage({ kind: "left", reason })}

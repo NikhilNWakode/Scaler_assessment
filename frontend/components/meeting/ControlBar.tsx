@@ -23,14 +23,14 @@ function ControlButton({ icon, label, onClick, danger, badge }: ControlButtonPro
   return (
     <button
       onClick={onClick}
-      className={`relative flex w-[68px] flex-col items-center gap-1 rounded-lg py-2 text-[11px] transition-colors sm:w-[76px] ${
+      className={`relative flex w-[54px] flex-col items-center gap-1 rounded-lg py-2 text-[10px] transition-colors sm:w-[76px] sm:text-[11px] ${
         danger ? "text-red-400 hover:bg-red-500/10" : "text-gray-200 hover:bg-white/10"
       }`}
     >
       {icon}
-      <span>{label}</span>
+      <span className="max-w-full truncate">{label}</span>
       {badge !== undefined && badge > 0 && (
-        <span className="absolute right-3 top-0.5 rounded-full bg-zoom-blue px-1.5 text-[10px] font-semibold text-white">
+        <span className="absolute right-1 top-0.5 rounded-full bg-zoom-blue px-1.5 text-[10px] font-semibold text-white sm:right-3">
           {badge}
         </span>
       )}
@@ -104,7 +104,7 @@ export default function ControlBar({
 
       <button
         onClick={onLeave}
-        className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 sm:px-5"
+        className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 sm:px-5 sm:text-sm"
       >
         {isHost ? "End" : "Leave"}
       </button>

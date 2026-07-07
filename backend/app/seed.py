@@ -1,5 +1,6 @@
 """Seed the database with the default user and sample meetings."""
 import random
+import secrets
 import string
 from datetime import datetime, timedelta, timezone
 
@@ -37,20 +38,20 @@ def seed() -> None:
 
         upcoming = [
             models.Meeting(
-                meeting_code=_code(), passcode=_passcode(), host_id=user.id,
+                meeting_code=_code(), passcode=_passcode(), host_key=secrets.token_hex(16), host_id=user.id,
                 title="Sprint Planning", description="Plan tasks for the next sprint cycle.",
                 meeting_type="scheduled", status="waiting",
                 scheduled_at=now + timedelta(hours=3), duration_minutes=45,
             ),
             models.Meeting(
-                meeting_code=_code(), passcode=_passcode(), host_id=user.id,
+                meeting_code=_code(), passcode=_passcode(), host_key=secrets.token_hex(16), host_id=user.id,
                 title="Design Review — Dashboard v2",
                 description="Walk through the new dashboard mockups with the design team.",
                 meeting_type="scheduled", status="waiting",
                 scheduled_at=now + timedelta(days=1, hours=2), duration_minutes=60,
             ),
             models.Meeting(
-                meeting_code=_code(), passcode=_passcode(), host_id=user.id,
+                meeting_code=_code(), passcode=_passcode(), host_key=secrets.token_hex(16), host_id=user.id,
                 title="1:1 with Mentor", description="Weekly sync-up and feedback session.",
                 meeting_type="scheduled", status="waiting",
                 scheduled_at=now + timedelta(days=2, hours=5), duration_minutes=30,
@@ -59,7 +60,7 @@ def seed() -> None:
 
         recent = [
             models.Meeting(
-                meeting_code=_code(), passcode=_passcode(), host_id=user.id,
+                meeting_code=_code(), passcode=_passcode(), host_key=secrets.token_hex(16), host_id=user.id,
                 title="Daily Standup", meeting_type="scheduled", status="ended",
                 scheduled_at=now - timedelta(days=1, hours=4), duration_minutes=15,
                 started_at=now - timedelta(days=1, hours=4),
@@ -67,14 +68,14 @@ def seed() -> None:
                 created_at=now - timedelta(days=2),
             ),
             models.Meeting(
-                meeting_code=_code(), passcode=_passcode(), host_id=user.id,
+                meeting_code=_code(), passcode=_passcode(), host_key=secrets.token_hex(16), host_id=user.id,
                 title="Nikhil Wakode's Zoom Meeting", meeting_type="instant", status="ended",
                 started_at=now - timedelta(days=2, hours=1),
                 ended_at=now - timedelta(days=2), duration_minutes=40,
                 created_at=now - timedelta(days=2, hours=1),
             ),
             models.Meeting(
-                meeting_code=_code(), passcode=_passcode(), host_id=user.id,
+                meeting_code=_code(), passcode=_passcode(), host_key=secrets.token_hex(16), host_id=user.id,
                 title="Project Kickoff — Video Platform",
                 description="Kickoff call for the video conferencing project.",
                 meeting_type="scheduled", status="ended",
