@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  CalendarPlus,
-  MonitorUp,
-  Plus,
-  Video,
-} from "lucide-react";
+import { CalendarPlus, MonitorUp, Plus, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import ActionTile from "@/components/ActionTile";
@@ -14,9 +9,10 @@ import MeetingListItem from "@/components/MeetingListItem";
 import Navbar from "@/components/Navbar";
 import NewMeetingModal from "@/components/NewMeetingModal";
 import ScheduleModal from "@/components/ScheduleModal";
+import Sidebar from "@/components/Sidebar";
 import { api, saveHostKey, type Meeting, type User } from "@/lib/api";
 
-function Clock() {
+function Greeting({ name }: { name: string | undefined }) {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -25,13 +21,20 @@ function Clock() {
     return () => clearInterval(t);
   }, []);
 
-  if (!now) return <div className="h-[76px]" />;
+  if (!now) return <div className="h-[64px]" />;
+
+  const hour = now.getHours();
+  const daypart = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+
   return (
-    <>
-      <p className="text-5xl font-bold tracking-tight">
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+        Good {daypart}
+        {name ? `, ${name.split(" ")[0]}` : ""}
+      </h1>
+      <p className="mt-1 text-sm text-gray-500">
         {now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-      </p>
-      <p className="mt-1 text-sm text-white/80">
+        {" · "}
         {now.toLocaleDateString([], {
           weekday: "long",
           month: "long",
@@ -39,7 +42,71 @@ function Clock() {
           year: "numeric",
         })}
       </p>
-    </>
+    </div>
+  );
+}
+
+interface MeetingsCardProps {
+  title: string;
+  meetings: Meeting[];
+  variant: "upcoming" | "recent";
+  loading: boolean;
+  slowHint: boolean;
+  loadError: string;
+  emptyText: string;
+  emptyAction?: React.ReactNode;
+  onStart: (m: Meeting) => void;
+  onCancel?: (m: Meeting) => void;
+}
+
+function MeetingsCard({
+  title,
+  meetings,
+  variant,
+  loading,
+  slowHint,
+  loadError,
+  emptyText,
+  emptyAction,
+  onStart,
+  onCancel,
+}: MeetingsCardProps) {
+  return (
+    <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <h2 className="mb-3 px-1 text-sm font-semibold text-gray-800">{title}</h2>
+      {loading ? (
+        <div className="flex flex-col gap-2.5 px-1 py-1">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-[68px] animate-pulse rounded-xl bg-gray-100" />
+          ))}
+          {slowHint && (
+            <p className="pt-1 text-center text-xs text-gray-400">
+              Waking up the server (free hosting) — the first load can take up
+              to a minute…
+            </p>
+          )}
+        </div>
+      ) : loadError ? (
+        <p className="px-2 py-8 text-center text-sm text-red-600">{loadError}</p>
+      ) : meetings.length === 0 ? (
+        <div className="px-2 py-8 text-center">
+          <p className="text-sm font-medium text-gray-600">{emptyText}</p>
+          {emptyAction}
+        </div>
+      ) : (
+        <div className="thin-scroll flex max-h-[320px] flex-col gap-2.5 overflow-y-auto pr-1">
+          {meetings.map((m) => (
+            <MeetingListItem
+              key={m.id}
+              meeting={m}
+              variant={variant}
+              onStart={onStart}
+              onCancel={onCancel}
+            />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -48,8 +115,8 @@ export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [upcoming, setUpcoming] = useState<Meeting[]>([]);
   const [recent, setRecent] = useState<Meeting[]>([]);
-  const [tab, setTab] = useState<"upcoming" | "recent">("upcoming");
   const [creating, setCreating] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [newMeetingInfo, setNewMeetingInfo] = useState<Meeting | null>(null);
@@ -113,16 +180,18 @@ export default function Dashboard() {
     }
   };
 
-  const meetings = tab === "upcoming" ? upcoming : recent;
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} />
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      <Navbar user={user} onMenuClick={() => setSidebarOpen(true)} />
 
-      <main className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-8 lg:grid-cols-[5fr_4fr] lg:py-14">
-        {/* Left: action tiles */}
-        <section className="flex items-start justify-center lg:pt-10">
-          <div className="grid grid-cols-2 gap-x-14 gap-y-10 sm:gap-x-20">
+      <div className="flex min-h-0 flex-1">
+        <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-8">
+          <Greeting name={user?.name} />
+
+          {/* action tiles, like the web portal home */}
+          <div className="mt-8 flex flex-wrap gap-x-10 gap-y-6 sm:gap-x-14">
             <ActionTile
               icon={Video}
               label="New Meeting"
@@ -151,90 +220,40 @@ export default function Dashboard() {
               }
             />
           </div>
-        </section>
 
-        {/* Right: clock card + meetings */}
-        <section className="flex flex-col gap-5">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zoom-blue via-[#2563c9] to-[#123a6b] p-6 text-white shadow-lg">
-            <div
-              className="pointer-events-none absolute -right-10 -top-14 h-48 w-48 rounded-full bg-white/10"
-              aria-hidden
-            />
-            <div
-              className="pointer-events-none absolute -bottom-16 right-16 h-40 w-40 rounded-full bg-white/5"
-              aria-hidden
-            />
-            <Clock />
-          </div>
-
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex gap-1 border-b border-gray-100 pb-2">
-              {(["upcoming", "recent"] as const).map((t) => (
+          <div className="mt-10 grid grid-cols-1 gap-5 xl:grid-cols-2">
+            <MeetingsCard
+              title="Upcoming Meetings"
+              meetings={upcoming}
+              variant="upcoming"
+              loading={loading}
+              slowHint={slowHint}
+              loadError={loadError}
+              emptyText="No upcoming meetings"
+              emptyAction={
                 <button
-                  key={t}
-                  onClick={() => setTab(t)}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
-                    tab === t
-                      ? "bg-zoom-blue-light text-zoom-blue"
-                      : "text-gray-500 hover:bg-gray-100"
-                  }`}
+                  onClick={() => setShowSchedule(true)}
+                  className="mt-2 text-sm font-medium text-zoom-blue hover:underline"
                 >
-                  {t}
+                  Schedule a meeting
                 </button>
-              ))}
-            </div>
-
-            {loading ? (
-              <div className="flex flex-col gap-2.5 px-1 py-1">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="h-[68px] animate-pulse rounded-xl bg-gray-100"
-                  />
-                ))}
-                {slowHint && (
-                  <p className="pt-1 text-center text-xs text-gray-400">
-                    Waking up the server (free hosting) — the first load can
-                    take up to a minute…
-                  </p>
-                )}
-              </div>
-            ) : loadError ? (
-              <p className="px-2 py-8 text-center text-sm text-red-600">
-                {loadError}
-              </p>
-            ) : meetings.length === 0 ? (
-              <div className="px-2 py-10 text-center">
-                <p className="text-sm font-medium text-gray-600">
-                  {tab === "upcoming"
-                    ? "No upcoming meetings"
-                    : "No recent meetings"}
-                </p>
-                {tab === "upcoming" && (
-                  <button
-                    onClick={() => setShowSchedule(true)}
-                    className="mt-2 text-sm font-medium text-zoom-blue hover:underline"
-                  >
-                    Schedule a meeting
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="thin-scroll flex max-h-[380px] flex-col gap-2.5 overflow-y-auto pr-1">
-                {meetings.map((m) => (
-                  <MeetingListItem
-                    key={m.id}
-                    meeting={m}
-                    variant={tab}
-                    onStart={startMeeting}
-                    onCancel={tab === "upcoming" ? cancelMeeting : undefined}
-                  />
-                ))}
-              </div>
-            )}
+              }
+              onStart={startMeeting}
+              onCancel={cancelMeeting}
+            />
+            <MeetingsCard
+              title="Recent Meetings"
+              meetings={recent}
+              variant="recent"
+              loading={loading}
+              slowHint={false}
+              loadError={loadError}
+              emptyText="No recent meetings"
+              onStart={startMeeting}
+            />
           </div>
-        </section>
-      </main>
+        </main>
+      </div>
 
       {showSchedule && (
         <ScheduleModal
