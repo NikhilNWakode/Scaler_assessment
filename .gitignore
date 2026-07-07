@@ -1,0 +1,22 @@
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+backend/*.db
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+frontend/*.tsbuildinfo
+
+# Env
+.env
+.env.local
+.env*.local
+
+# Tooling / OS
+.claude/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,95 @@
+"use client";
+
+import { Copy, Trash2, Video } from "lucide-react";
+import { useState } from "react";
+import { formatMeetingCode, inviteLink, type Meeting } from "@/lib/api";
+
+function formatWhen(meeting: Meeting): string {
+  const iso = meeting.scheduled_at ?? meeting.started_at ?? meeting.created_at;
+  const d = new Date(iso + (iso.endsWith("Z") ? "" : "Z"));
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+  if (sameDay(d, today)) return `Today, ${time}`;
+  if (sameDay(d, tomorrow)) return `Tomorrow, ${time}`;
+  return `${d.toLocaleDateString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  })}, ${time}`;
+}
+
+interface Props {
+  meeting: Meeting;
+  variant: "upcoming" | "recent";
+  onStart: (meeting: Meeting) => void;
+  onCancel?: (meeting: Meeting) => void;
+}
+
+export default function MeetingListItem({
+  meeting,
+  variant,
+  onStart,
+  onCancel,
+}: Props) {
+  const [copied, setCopied] = useState(false);
+
+  const copyInvite = async () => {
+    const text = `${meeting.host.name} is inviting you to a Zoom meeting.\n\nTopic: ${meeting.title}\nJoin: ${inviteLink(meeting.meeting_code)}\nMeeting ID: ${formatMeetingCode(meeting.meeting_code)}\nPasscode: ${meeting.passcode}`;
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3.5 transition-shadow hover:shadow-sm">
+      <div className="flex w-12 flex-col items-center rounded-lg bg-zoom-blue-light py-1.5">
+        <Video size={18} className="text-zoom-blue" />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-gray-900">
+          {meeting.title}
+        </p>
+        <p className="mt-0.5 text-xs text-gray-500">
+          {formatWhen(meeting)} · ID: {formatMeetingCode(meeting.meeting_code)}
+          {variant === "upcoming" && ` · ${meeting.duration_minutes} min`}
+          {variant === "recent" && meeting.status === "ended" && " · Ended"}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={copyInvite}
+          title="Copy invitation"
+          className="rounded-md p-2 text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100"
+        >
+          {copied ? (
+            <span className="text-xs font-medium text-green-600">Copied</span>
+          ) : (
+            <Copy size={16} />
+          )}
+        </button>
+        {variant === "upcoming" && onCancel && (
+          <button
+            onClick={() => onCancel(meeting)}
+            title="Delete meeting"
+            className="rounded-md p-2 text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
+        <button
+          onClick={() => onStart(meeting)}
+          className="rounded-lg bg-zoom-blue px-4 py-1.5 text-sm font-medium text-white hover:bg-zoom-blue-dark"
+        >
+          {variant === "upcoming" ? "Start" : "Rejoin"}
+        </button>
+      </div>
+    </div>
+  );
+}
