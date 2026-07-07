@@ -1,7 +1,8 @@
 /** Thin fetch wrapper around the FastAPI backend. */
 
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+).replace(/\/+$/, ""); // tolerate a trailing slash in the env var
 
 export const WS_URL = API_URL.replace(/^http/, "ws");
 
