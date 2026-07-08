@@ -346,6 +346,7 @@ export default function Dashboard() {
                         key={m.id}
                         meeting={m}
                         variant="upcoming"
+                        compact
                         onStart={startMeeting}
                         onCancel={cancelMeeting}
                       />
